@@ -10,108 +10,90 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-        tailwind.config = { theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] }, colors: { 'kio-cyan': '#4DCFFF', 'kio-navy': '#0A0A40' } } } }
+        tailwind.config = { theme: { extend: { colors: { 'kio-cyan': '#4DCFFF', 'kio-navy': '#0A0A40' } } } }
     </script>
     <style>
         :root { --kio-navy: #0A0A40; --kio-cyan: #4DCFFF; }
-        body { background-color: #f3f4f6; margin: 0; font-family: 'Inter', sans-serif; }
-        .kio-app-bar { position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%); max-width: 95%; width: 100%; border-radius: 1.5rem; z-index: 100; background: var(--kio-navy); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
-        main { padding-top: 11rem; } 
-        .kio-logo-text { color: white; text-shadow: 0 0 10px var(--kio-cyan); }
+        body { background-color: #f3f4f6; margin: 0; font-family: sans-serif; }
+        .kio-app-bar { position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%); max-width: 95%; width: 100%; border-radius: 1.5rem; z-index: 100; background: var(--kio-navy); box-shadow: 0 10px 25px rgba(0,0,0,0.4); padding: 1.5rem; color: white; }
+        main { padding-top: 12rem; } 
+        .kio-logo-text { color: white; text-shadow: 0 0 10px var(--kio-cyan); font-weight: 900; }
         .kanban-col { background: #e5e7eb; border-radius: 1.5rem; min-height: 500px; width: 300px; flex-shrink: 0; padding: 1.2rem; }
-        .task-card { background: white; padding: 1.2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: grab; border-left: 5px solid var(--kio-cyan); margin-bottom: 1rem; }
+        .task-card { background: white; padding: 1.2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 5px solid var(--kio-cyan); margin-bottom: 1rem; }
         #login-overlay { position: fixed; inset: 0; background: #0A0A40; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
-    <script>
-        function quitarBloqueo() {
-            const overlay = document.getElementById('login-overlay');
-            if(overlay) overlay.style.display = 'none';
-        }
-    </script>
 
     <div id="login-overlay">
-        <div class="text-center p-10">
-            <h1 class="text-6xl font-black text-white mb-2 kio-logo-text uppercase tracking-tighter">Kio</h1>
-            <p class="text-kio-cyan font-bold tracking-[0.3em] mb-12 uppercase text-[10px]">Acceso Restringido</p>
-            <div id="google-btn" class="flex justify-center mb-10"></div>
-            <button onclick="quitarBloqueo()" style="cursor: pointer; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; text-decoration: underline;">
-                Omitir para revisión visual
-            </button>
-        </div>
+        <h1 class="text-6xl kio-logo-text uppercase mb-2">Kio</h1>
+        <p class="text-kio-cyan font-bold tracking-[0.3em] mb-12 uppercase text-[10px]">Acceso Privado</p>
+        <div id="google-btn" class="mb-10"></div>
+        <button onclick="document.getElementById('login-overlay').style.display='none'" style="color:white; opacity: 0.3; text-decoration: underline; font-size: 10px; cursor: pointer; border: none; background: none;">
+            OMITIR PARA REVISIÓN VISUAL
+        </button>
     </div>
 
-    <header class="kio-app-bar">
-        <div class="px-8 h-20 flex items-center relative">
-            <div class="flex items-center space-x-2">
-                <span class="text-2xl font-black kio-logo-text uppercase">Kio</span>
-                <span class="text-[9px] text-gray-400 font-bold hidden sm:block uppercase">Made to Disrupt</span>
-            </div>
-            <div class="flex-grow flex justify-center absolute inset-0 items-center pointer-events-none">
-                <h1 class="text-white font-bold tracking-widest text-xs sm:text-sm uppercase text-center">Tablero Seguimiento Actividades</h1>
-            </div>
-            <div class="ml-auto text-white text-[10px] font-bold uppercase border-l border-white/20 pl-4" id="user-tag">Invitado</div>
+    <header class="kio-app-bar flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl kio-logo-text">KIO</span>
+            <span class="text-[9px] opacity-50 uppercase font-bold border-l border-white/20 pl-2">Made to Disrupt</span>
         </div>
+        <h1 class="font-bold uppercase text-xs tracking-widest">Tablero Seguimiento Actividades</h1>
+        <div id="user-tag" class="text-[10px] font-bold">Invitado</div>
     </header>
 
     <main class="max-w-7xl mx-auto px-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-center text-gray-800 font-bold uppercase text-[10px]">
-            <div class="bg-white p-6 rounded-3xl border-b-8 border-red-500 shadow-sm"><p>Pendientes</p><p class="text-4xl font-black mt-2" id="c-back">0</p></div>
-            <div class="bg-white p-6 rounded-3xl border-b-8 border-kio-cyan shadow-sm"><p>En Curso</p><p class="text-4xl font-black mt-2" id="c-prog">0</p></div>
-            <div class="bg-white p-6 rounded-3xl border-b-8 border-green-500 shadow-sm"><p>Finalizado</p><p class="text-4xl font-black mt-2" id="c-done">0</p></div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-center text-[10px] font-bold">
+            <div class="bg-white p-6 rounded-3xl border-b-8 border-red-500 shadow-sm"><p>PENDIENTES</p><p class="text-4xl font-black mt-2" id="c-back">0</p></div>
+            <div class="bg-white p-6 rounded-3xl border-b-8 border-kio-cyan shadow-sm"><p>EN CURSO</p><p class="text-4xl font-black mt-2" id="c-prog">0</p></div>
+            <div class="bg-white p-6 rounded-3xl border-b-8 border-green-500 shadow-sm"><p>FINALIZADO</p><p class="text-4xl font-black mt-2" id="c-done">0</p></div>
         </div>
 
         <div class="flex gap-6 overflow-x-auto pb-10">
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-gray-500 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-list"></i> Backlog</h3><div id="col-back" class="space-y-4 min-h-[400px]"></div></div>
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-blue-500 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-rocket-launch"></i> En Curso</h3><div id="col-prog" class="space-y-4 min-h-[400px]"></div></div>
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-orange-500 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-magnifying-glass"></i> Revisión</h3><div id="col-rev" class="space-y-4 min-h-[400px]"></div></div>
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-green-600 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-check-circle"></i> Finalizado</h3><div id="col-done" class="space-y-4 min-h-[400px]"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-bold text-gray-400 mb-6 uppercase tracking-widest">Backlog</h3><div id="col-back" style="min-height: 400px;"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-bold text-blue-500 mb-6 uppercase tracking-widest">En Curso</h3><div id="col-prog" style="min-height: 400px;"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-bold text-orange-500 mb-6 uppercase tracking-widest">Revisión</h3><div id="col-rev" style="min-height: 400px;"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-bold text-green-600 mb-6 uppercase tracking-widest">Finalizado</h3><div id="col-done" style="min-height: 400px;"></div></div>
         </div>
     </main>
 
-    <button onclick="abrirModal()" class="fixed bottom-10 right-10 bg-[#0A0A40] text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-50 border-4 border-white hover:scale-110 transition active:scale-95 shadow-kio-cyan/20">
+    <button onclick="document.getElementById('m-task').style.display='flex'" class="fixed bottom-10 right-10 bg-[#0A0A40] text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-50 border-4 border-white hover:scale-110 transition shadow-kio-cyan/20">
         <i class="ph-bold ph-plus text-3xl"></i>
     </button>
 
-    <div id="m-task" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl">
-            <h2 class="font-black text-gray-800 uppercase text-[10px] mb-6 tracking-widest flex items-center gap-2"><i class="ph-bold ph-note-pencil"></i> Nueva Actividad</h2>
-            <input type="text" id="i-task" placeholder="Título de la actividad..." class="w-full border-b-2 py-3 outline-none focus:border-kio-cyan mb-8 text-sm font-medium">
-            <div class="flex gap-4"><button onclick="cerrarModal()" class="flex-1 text-gray-400 text-[10px] font-black uppercase tracking-widest">Cancelar</button><button onclick="addT()" class="flex-1 bg-[#0A0A40] text-white py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-black transition">Guardar</button></div>
+    <div id="m-task" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 200;">
+        <div class="bg-white p-8 rounded-[2.5rem] w-full max-w-sm">
+            <h2 class="font-bold uppercase text-[10px] mb-6 tracking-widest">Nueva Actividad</h2>
+            <input type="text" id="i-task" placeholder="Título..." class="w-full border-b-2 py-3 outline-none mb-8 text-sm">
+            <div class="flex gap-4">
+                <button onclick="document.getElementById('m-task').style.display='none'" class="flex-1 text-gray-400 text-[10px] font-bold uppercase">Cancelar</button>
+                <button onclick="addT()" class="flex-1 bg-[#0A0A40] text-white py-4 rounded-2xl text-[10px] font-bold uppercase shadow-lg">Guardar</button>
+            </div>
         </div>
     </div>
 
     <script>
-    // --- 2. LÓGICA DE DATOS Y GOOGLE ---
+    // --- CONFIGURACIÓN ---
     const SUPABASE_URL = 'https://cmtfevqonvihtqqwwqgc.supabase.co'; //
     const SUPABASE_KEY = 'sb_publishable_P7LOmUI8DJUKkIcdkDgzAg_CPOfcS4e'; //
-    const GOOGLE_CLIENT_ID = '481012850408-jqmlauhb1qhgqe67ua1tiad1ovgj1e96.apps.googleusercontent.com'; //
+    const GOOGLE_ID = '481012850408-jqmlauhb1qhgqe67ua1tiad1ovgj1e96.apps.googleusercontent.com'; //
     
-    // Conexión segura a Supabase
-    let supabase;
-    try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } catch(e) { console.error("Error conectando a Supabase"); }
-
-    function abrirModal() { document.getElementById('m-task').classList.remove('hidden'); document.getElementById('i-task').focus(); }
-    function cerrarModal() { document.getElementById('m-task').classList.add('hidden'); }
+    const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
     async function cargarTareas() {
         if(!supabase) return;
-        const { data: tareas, error } = await supabase.from('tareas').select('*').order('ultima_actualizacion', { ascending: false }); //
-        if (error) return;
-        
+        const { data: tareas } = await supabase.from('tareas').select('*').order('ultima_actualizacion', { ascending: false }); //
+        if (!tareas) return;
         ['col-back', 'col-prog', 'col-rev', 'col-done'].forEach(id => document.getElementById(id).innerHTML = '');
-        
         tareas.forEach(t => {
-            const mapping = { 'Backlog': 'col-back', 'In Progress': 'col-prog', 'Review': 'col-rev', 'Done': 'col-done' }; //
-            const col = document.getElementById(mapping[t.estado]);
+            const map = { 'Backlog': 'col-back', 'In Progress': 'col-prog', 'Review': 'col-rev', 'Done': 'col-done' }; //
+            const col = document.getElementById(map[t.estado]);
             if (col) {
                 const card = document.createElement('div');
-                card.className = "task-card animate-in fade-in duration-300";
+                card.className = "task-card";
                 card.setAttribute('data-id', t.id); //
-                card.innerHTML = `<p class="text-xs font-bold text-gray-700 uppercase">${t.titulo}</p><div class="flex justify-between mt-3 opacity-20 text-[8px] font-black uppercase tracking-tighter"><span>${new Date(t.ultima_actualizacion).toLocaleDateString()}</span><i class="ph-bold ph-dots-six-vertical text-lg"></i></div>`;
+                card.innerHTML = `<p class="text-xs font-bold text-gray-700 uppercase">${t.titulo}</p>`;
                 col.appendChild(card);
             }
         });
@@ -121,46 +103,13 @@
     async function addT() {
         const val = document.getElementById('i-task').value;
         if(!val || !supabase) return;
-        const { error } = await supabase.from('tareas').insert([{ titulo: val, estado: 'Backlog' }]); //
-        if (!error) { document.getElementById('i-task').value = ''; cerrarModal(); cargarTareas(); }
+        await supabase.from('tareas').insert([{ titulo: val, estado: 'Backlog' }]); //
+        document.getElementById('i-task').value = '';
+        document.getElementById('m-task').style.display='none';
+        cargarTareas(); //
     }
 
-    async function moverTarea(id, nuevoEstado) {
+    async function moverTarea(id, nEst) {
         if(!supabase) return;
-        const mappingInverso = { 'col-back': 'Backlog', 'col-prog': 'In Progress', 'col-rev': 'Review', 'col-done': 'Done' }; //
-        await supabase.from('tareas').update({ estado: mappingInverso[nuevoEstado], ultima_actualizacion: new Date().toISOString() }).eq('id', id); //
-        updateC();
-    }
-
-    ['col-back', 'col-prog', 'col-rev', 'col-done'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            new Sortable(el, { group: 'k', animation: 150, onEnd: (evt) => { moverTarea(evt.item.getAttribute('data-id'), evt.to.id); } });
-        }
-    });
-
-    function updateC() {
-        document.getElementById('c-back').innerText = document.getElementById('col-back').children.length;
-        document.getElementById('c-prog').innerText = document.getElementById('col-prog').children.length;
-        document.getElementById('c-done').innerText = document.getElementById('col-done').children.length;
-    }
-
-    window.onload = function() {
-        cargarTareas();
-        if (typeof google !== 'undefined') {
-            google.accounts.id.initialize({ 
-                client_id: GOOGLE_CLIENT_ID, 
-                callback: (r) => {
-                    const d = JSON.parse(atob(r.credential.split('.')[1]));
-                    if(d.email.endsWith('@kio.tech')) { //
-                        document.getElementById('user-tag').innerText = d.name.toUpperCase();
-                        quitarBloqueo();
-                    }
-                }
-            });
-            google.accounts.id.renderButton(document.getElementById("google-btn"), { theme: "outline", size: "large" });
-        }
-    }
-    </script>
-</body>
-</html>
+        const inv = { 'col-back': 'Backlog', 'col-prog': 'In Progress', 'col-rev': 'Review', 'col-done': 'Done' }; //
+        await supabase.from('tareas').update({ estado: inv[nEst], ultima_actualizacion: new Date().toISOString() }).eq('id', id); //
