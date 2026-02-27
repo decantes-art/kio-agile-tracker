@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KIO - Gestión Ágil</title>
+    <title>KIO - Seguimiento de Actividades</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/dist/phosphor.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] }, colors: { 'kio-cyan': '#4DCFFF', 'kio-navy': '#0A0A40' } } } }
@@ -25,7 +26,7 @@
 <body>
     <div id="login-overlay">
         <div class="text-center p-10">
-            <h1 class="text-6xl font-black text-white mb-2 kio-logo-text uppercase">Kio</h1>
+            <h1 class="text-6xl font-black text-white mb-2 kio-logo-text uppercase tracking-tighter">Kio</h1>
             <p class="text-kio-cyan font-bold tracking-[0.3em] mb-12 uppercase text-[10px]">Acceso Restringido</p>
             <div id="google-btn" class="flex justify-center mb-10"></div>
             <button onclick="quitarBloqueo()" class="text-white/20 text-[10px] hover:text-white underline uppercase tracking-widest">Omitir para revisión visual</button>
@@ -39,61 +40,56 @@
                 <span class="text-[9px] text-gray-400 font-bold hidden sm:block uppercase">Made to Disrupt</span>
             </div>
             <div class="flex-grow flex justify-center absolute inset-0 items-center pointer-events-none">
-                <h1 class="text-white font-bold tracking-widest text-xs sm:text-sm uppercase">Gestión de Proyectos Ágiles</h1>
+                <h1 class="text-white font-bold tracking-widest text-xs sm:text-sm uppercase text-center">Tablero Seguimiento Actividades</h1>
             </div>
-            <div class="ml-auto text-white text-[10px] font-bold uppercase" id="user-tag"></div>
+            <div class="ml-auto text-white text-[10px] font-bold uppercase border-l border-white/20 pl-4" id="user-tag">Invitado</div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-center">
             <div class="bg-white p-6 rounded-3xl border-b-8 border-red-500 shadow-sm"><p class="text-[9px] font-black text-gray-400 uppercase">Pendientes</p><p class="text-4xl font-black text-gray-800" id="c-back">0</p></div>
             <div class="bg-white p-6 rounded-3xl border-b-8 border-kio-cyan shadow-sm"><p class="text-[9px] font-black text-gray-400 uppercase">En Curso</p><p class="text-4xl font-black text-gray-800" id="c-prog">0</p></div>
             <div class="bg-white p-6 rounded-3xl border-b-8 border-green-500 shadow-sm"><p class="text-[9px] font-black text-gray-400 uppercase">Finalizado</p><p class="text-4xl font-black text-gray-800" id="c-done">0</p></div>
         </div>
 
         <div class="flex gap-6 overflow-x-auto pb-10">
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-gray-500 mb-6 uppercase">Backlog</h3><div id="col-back" class="space-y-4 min-h-[400px]"></div></div>
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-blue-500 mb-6 uppercase">En Curso</h3><div id="col-prog" class="space-y-4 min-h-[400px]"></div></div>
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-orange-500 mb-6 uppercase">Revisión</h3><div id="col-rev" class="space-y-4 min-h-[400px]"></div></div>
-            <div class="kanban-col"><h3 class="text-[10px] font-black text-green-600 mb-6 uppercase">Finalizado</h3><div id="col-done" class="space-y-4 min-h-[400px]"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-black text-gray-500 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-list"></i> Backlog</h3><div id="col-back" class="space-y-4 min-h-[400px]"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-black text-blue-500 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-rocket-launch"></i> En Curso</h3><div id="col-prog" class="space-y-4 min-h-[400px]"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-black text-orange-500 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-magnifying-glass"></i> Revisión</h3><div id="col-rev" class="space-y-4 min-h-[400px]"></div></div>
+            <div class="kanban-col"><h3 class="text-[10px] font-black text-green-600 mb-6 uppercase flex items-center gap-2"><i class="ph-bold ph-check-circle"></i> Finalizado</h3><div id="col-done" class="space-y-4 min-h-[400px]"></div></div>
         </div>
     </main>
 
-    <button onclick="abrirModal()" class="fixed bottom-10 right-10 bg-[#0A0A40] text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-50 border-4 border-white hover:scale-110 transition"><i class="ph-bold ph-plus text-2xl"></i></button>
+    <button onclick="abrirModal()" class="fixed bottom-10 right-10 bg-[#0A0A40] text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-50 border-4 border-white hover:scale-110 transition active:scale-95 shadow-kio-cyan/20">
+        <i class="ph-bold ph-plus text-3xl"></i>
+    </button>
 
     <div id="m-task" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl">
-            <h2 class="font-black text-gray-800 uppercase text-[10px] mb-6 tracking-widest">Nueva Actividad</h2>
-            <input type="text" id="i-task" placeholder="Nombre de la tarea..." class="w-full border-b-2 py-3 outline-none focus:border-kio-cyan mb-8 text-sm font-medium">
-            <div class="flex gap-4"><button onclick="cerrarModal()" class="flex-1 text-gray-400 text-[10px] font-black uppercase tracking-widest">Cancelar</button><button onclick="addT()" class="flex-1 bg-[#0A0A40] text-white py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg">Guardar</button></div>
+            <h2 class="font-black text-gray-800 uppercase text-[10px] mb-6 tracking-widest flex items-center gap-2"><i class="ph-bold ph-note-pencil"></i> Nueva Actividad</h2>
+            <input type="text" id="i-task" placeholder="Título de la actividad..." class="w-full border-b-2 py-3 outline-none focus:border-kio-cyan mb-8 text-sm font-medium">
+            <div class="flex gap-4"><button onclick="cerrarModal()" class="flex-1 text-gray-400 text-[10px] font-black uppercase tracking-widest">Cancelar</button><button onclick="addT()" class="flex-1 bg-[#0A0A40] text-white py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-black transition">Guardar</button></div>
         </div>
     </div>
 
     <script>
-    // --- CONFIGURACIÓN DE SUPABASE ---
+    // --- CONFIGURACIÓN DE SUPABASE (Tus llaves actuales) ---
     const SUPABASE_URL = 'https://cmtfevqonvihtqqwwqgc.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_P7LOmUI8DJUKkIcdkDgzAg_CPOfcS4e';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Función para abrir/cerrar modal
     function quitarBloqueo() { document.getElementById('login-overlay').style.display = 'none'; }
     function abrirModal() { document.getElementById('m-task').classList.remove('hidden'); document.getElementById('i-task').focus(); }
     function cerrarModal() { document.getElementById('m-task').classList.add('hidden'); }
 
-    // CARGAR TAREAS DESDE LA BASE DE DATOS AL INICIAR
     async function cargarTareas() {
         const { data: tareas, error } = await supabase.from('tareas').select('*').order('ultima_actualizacion', { ascending: false });
         if (error) return console.error(error);
-
-        // Limpiar columnas
         ['col-back', 'col-prog', 'col-rev', 'col-done'].forEach(id => document.getElementById(id).innerHTML = '');
-
-        // Pintar tarjetas
         tareas.forEach(t => {
             const mapping = { 'Backlog': 'col-back', 'In Progress': 'col-prog', 'Review': 'col-rev', 'Done': 'col-done' };
-            const colId = mapping[t.estado];
-            const col = document.getElementById(colId);
+            const col = document.getElementById(mapping[t.estado]);
             if (col) {
                 const card = document.createElement('div');
                 card.className = "task-card animate-in fade-in duration-300";
@@ -105,37 +101,24 @@
         updateC();
     }
 
-    // GUARDAR NUEVA TAREA EN SUPABASE
     async function addT() {
         const val = document.getElementById('i-task').value;
         if(!val) return;
-
         const { error } = await supabase.from('tareas').insert([{ titulo: val, estado: 'Backlog' }]);
-        
-        if (!error) {
-            document.getElementById('i-task').value = '';
-            cerrarModal();
-            cargarTareas(); // Recargar para ver la nueva tarea
-        }
+        if (!error) { document.getElementById('i-task').value = ''; cerrarModal(); cargarTareas(); }
     }
 
-    // ACTUALIZAR ESTADO AL MOVER (Drag & Drop)
     async function moverTarea(id, nuevoEstado) {
         const mappingInverso = { 'col-back': 'Backlog', 'col-prog': 'In Progress', 'col-rev': 'Review', 'col-done': 'Done' };
         await supabase.from('tareas').update({ estado: mappingInverso[nuevoEstado], ultima_actualizacion: new Date().toISOString() }).eq('id', id);
         updateC();
     }
 
-    // Inicializar Sortable con guardado
     ['col-back', 'col-prog', 'col-rev', 'col-done'].forEach(id => {
         new Sortable(document.getElementById(id), { 
             group: 'k', 
             animation: 150, 
-            onEnd: (evt) => {
-                const idTarea = evt.item.getAttribute('data-id');
-                const idColumnaDestino = evt.to.id;
-                moverTarea(idTarea, idColumnaDestino);
-            } 
+            onEnd: (evt) => { moverTarea(evt.item.getAttribute('data-id'), evt.to.id); } 
         });
     });
 
@@ -144,43 +127,20 @@
         document.getElementById('c-prog').innerText = document.getElementById('col-prog').children.length;
         document.getElementById('c-done').innerText = document.getElementById('col-done').children.length;
     }
-        function quitarBloqueo() { document.getElementById('login-overlay').style.display = 'none'; }
-        function abrirModal() { document.getElementById('m-task').classList.remove('hidden'); }
-        function cerrarModal() { document.getElementById('m-task').classList.add('hidden'); }
 
-        function addT() {
-            const val = document.getElementById('i-task').value;
-            if(!val) return;
-            const card = document.createElement('div');
-            card.className = "task-card animate-in fade-in duration-300";
-            card.innerHTML = `<p class="text-xs font-bold text-gray-700 uppercase leading-relaxed">${val}</p>`;
-            document.getElementById('col-back').appendChild(card);
-            document.getElementById('i-task').value = '';
-            cerrarModal();
-            updateC();
-        }
-
-        ['col-back', 'col-prog', 'col-rev', 'col-done'].forEach(id => {
-            new Sortable(document.getElementById(id), { group: 'k', animation: 150, onEnd: updateC });
-        });
-
-        function updateC() {
-            document.getElementById('c-back').innerText = document.getElementById('col-back').children.length;
-            document.getElementById('c-prog').innerText = document.getElementById('col-prog').children.length;
-            document.getElementById('c-done').innerText = document.getElementById('col-done').children.length;
-        }
-
-        window.onload = function() {
-            if (typeof google !== 'undefined') {
-                google.accounts.id.initialize({ client_id: "481012850408-jqmlauhb1qhgqe67ua1tiad1ovgj1e96.apps.googleusercontent.com", callback: (r) => {
+    window.onload = function() {
+        cargarTareas();
+        if (typeof google !== 'undefined') {
+            google.accounts.id.initialize({ 
+                client_id: "481012850408-jqmlauhb1qhgqe67ua1tiad1ovgj1e96.apps.googleusercontent.com", 
+                callback: (r) => {
                     const d = JSON.parse(atob(r.credential.split('.')[1]));
-                    if(d.email.endsWith('@kio.tech')) { document.getElementById('user-tag').innerText = d.name; quitarBloqueo(); }
-                }});
-                google.accounts.id.renderButton(document.getElementById("google-btn"), { theme: "outline", size: "large" });
-            }
+                    if(d.email.endsWith('@kio.tech')) { document.getElementById('user-tag').innerText = d.name.toUpperCase(); quitarBloqueo(); }
+                }
+            });
+            google.accounts.id.renderButton(document.getElementById("google-btn"), { theme: "outline", size: "large" });
         }
+    }
     </script>
 </body>
 </html>
-
-
