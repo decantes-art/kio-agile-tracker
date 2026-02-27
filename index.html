@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KIO Project Tracker - Oficial</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/dist/phosphor.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    colors: {
+                        'kio-cyan': '#4DCFFF', 
+                        'kio-navy-darker': '#0A0A40',
+                        'kio-navy-dark': '#1A1A70',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-kio-cyan: #4DCFFF; 
+            --color-kio-navy-darker: #0A0A40; 
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .app-bar-bg { background-color: var(--color-kio-navy-darker); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .kio-app-bar-container {
+            position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%);
+            max-width: 90%; width: 100%; border-radius: 1.5rem; z-index: 50;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+        }
+        .kio-logo-text { color: white; text-shadow: 0 0 5px var(--color-kio-cyan); }
+        main { padding-top: 8rem; }
+        .kanban-column { background: #e5e7eb; border-radius: 1.2rem; min-height: 60vh; width: 300px; flex-shrink: 0; }
+        .ghost-card { background: #c7d2fe !important; border: 2px dashed #6366f1 !important; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="kio-app-bar-container app-bar-bg">
+        <div class="px-6 h-16 sm:h-20 flex items-center relative">
+            <div class="flex items-center space-x-2">
+                <span class="text-xl sm:text-2xl font-extrabold kio-logo-text">KIO</span>
+                <span class="text-[10px] text-gray-400 font-semibold tracking-wider uppercase hidden sm:block">MADE TO DISRUPT</span>
+            </div>
+            <div class="flex-grow flex justify-center items-center h-full absolute inset-0 pointer-events-none">
+                <h1 class="text-white font-bold tracking-wide text-sm sm:text-lg">AGILE PROJECT TRACKER</h1>
+            </div>
+            <div class="ml-auto flex items-center space-x-4">
+                <button onclick="syncGmail()" class="text-kio-cyan border border-kio-cyan/30 px-3 py-1 rounded-full text-[10px] font-bold hover:bg-kio-cyan hover:text-kio-navy-dark transition">
+                    SYNC GMAIL
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="bg-red-100 p-3 rounded-xl"><i class="ph-bold ph-warning-octagon text-red-600"></i></div>
+                <div><p class="text-[10px] font-bold text-gray-400">ESTANCADAS</p><p class="text-xl font-bold" id="stale-count">0</p></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="bg-kio-cyan/20 p-3 rounded-xl"><i class="ph-bold ph-rocket text-kio-navy-dark"></i></div>
+                <div><p class="text-[10px] font-bold text-gray-400">EN PROGRESO</p><p class="text-xl font-bold" id="progress-count">0</p></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="bg-green-100 p-3 rounded-xl"><i class="ph-bold ph-check-circle text-green-600"></i></div>
+                <div><p class="text-[10px] font-bold text-gray-400">COMPLETADAS</p><p class="text-xl font-bold" id="done-count">0</p></div>
+            </div>
+        </div>
+
+        <div class="flex gap-6 overflow-x-auto pb-10">
+            <div class="kanban-column p-4">
+                <h3 class="text-xs font-black text-gray-500 mb-4 uppercase tracking-widest flex justify-between">Backlog <span class="bg-gray-300 px-2 rounded-full text-white"></span></h3>
+                <div class="kanban-content space-y-4 min-h-[400px]" data-status="Backlog"></div>
+            </div>
+
+            <div class="kanban-column p-4">
+                <h3 class="text-xs font-black text-gray-500 mb-4 uppercase tracking-widest flex justify-between">In Progress</h3>
+                <div class="kanban-content space-y-4 min-h-[400px]" data-status="In Progress"></div>
+            </div>
+
+            <div class="kanban-column p-4">
+                <h3 class="text-xs font-black text-gray-500 mb-4 uppercase tracking-widest flex justify-between">Review</h3>
+                <div class="kanban-content space-y-4 min-h-[400px]" data-status="Review"></div>
+            </div>
+
+            <div class="kanban-column p-4 text-gray-400">
+                <h3 class="text-xs font-black text-gray-400 mb-4 uppercase tracking-widest flex justify-between">Done</h3>
+                <div class="kanban-content space-y-4 min-h-[400px]" data-status="Done"></div>
+            </div>
+        </div>
+    </main>
+
+    <button onclick="toggleModal(true)" class="fixed bottom-8 right-8 bg-kio-navy-dark text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition z-40">
+        <i class="ph-bold ph-plus text-xl"></i>
+    </button>
+
+    <div id="taskModal" class="fixed inset-0 bg-kio-navy-darker/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+            <div class="bg-kio-navy-darker p-6 flex justify-between">
+                <h3 class="text-white font-bold">NUEVA ACTIVIDAD</h3>
+                <button onclick="toggleModal(false)" class="text-white/50 hover:text-white"><i class="ph-bold ph-x"></i></button>
+            </div>
+            <form id="taskForm" class="p-6 space-y-4">
+                <input type="text" id="taskTitle" placeholder="Nombre de la tarea" required class="w-full border p-3 rounded-xl outline-none focus:border-kio-cyan">
+                <select id="taskPriority" class="w-full border p-3 rounded-xl outline-none">
+                    <option value="Baja">Baja</option>
+                    <option value="Media" selected>Media</option>
+                    <option value="Alta">Alta</option>
+                </select>
+                <button type="submit" class="w-full bg-kio-cyan text-kio-navy-darker font-bold py-3 rounded-xl uppercase tracking-tighter shadow-lg">Crear Tarea</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN SUPABASE (RELLENA CON TUS DATOS)
+        const SUPABASE_URL = 'https://TU_PROYECTO.supabase.co';
+        const SUPABASE_KEY = 'TU_LLAVE_ANONIMA';
+        const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+        // DATOS LOCALES (Para que funcione aunque no tengas Supabase todavía)
+        let tareasLocales = [
+            { id: '1', titulo: 'Setup Proyecto KIO', estado: 'Backlog', prioridad: 'Alta', ultima_actualizacion: new Date() },
+            { id: '2', titulo: 'Dashboard PRTG', estado: 'In Progress', prioridad: 'Media', ultima_actualizacion: new Date(Date.now() - 200000000) }
+        ];
+
+        function toggleModal(show) {
+            document.getElementById('taskModal').classList.toggle('hidden', !show);
+        }
+
+        function renderTablero() {
+            document.querySelectorAll('.kanban-content').forEach(el => el.innerHTML = '');
+            
+            tareasLocales.forEach(t => {
+                const col = document.querySelector(`[data-status="${t.estado}"]`);
+                const esEstancada = (new Date() - new Date(t.ultima_actualizacion)) > 172800000;
+                
+                const card = document.createElement('div');
+                card.className = `bg-white p-4 rounded-xl shadow-sm border ${esEstancada ? 'border-l-4 border-red-500' : 'border-gray-200'} cursor-move relative`;
+                card.setAttribute('data-id', t.id);
+                card.innerHTML = `
+                    ${esEstancada ? '<span class="absolute top-0 right-0 bg-red-500 text-white text-[8px] px-2 py-0.5 rounded-bl-lg font-bold">STALE</span>' : ''}
+                    <p class="text-sm font-bold text-gray-800">${t.titulo}</p>
+                    <div class="mt-4 flex justify-between text-[9px] font-bold text-gray-400 uppercase">
+                        <span>${t.prioridad}</span>
+                        <span>${new Date(t.ultima_actualizacion).toLocaleDateString()}</span>
+                    </div>
+                `;
+                col.appendChild(card);
+            });
+            actualizarContadores();
+        }
+
+        function actualizarContadores() {
+            document.getElementById('stale-count').innerText = tareasLocales.filter(t => (new Date() - new Date(t.ultima_actualizacion)) > 172800000).length;
+            document.getElementById('progress-count').innerText = tareasLocales.filter(t => t.estado === 'In Progress').length;
+            document.getElementById('done-count').innerText = tareasLocales.filter(t => t.estado === 'Done').length;
+        }
+
+        // ACTIVAR DRAG & DROP
+        document.querySelectorAll('.kanban-content').forEach(el => {
+            new Sortable(el, {
+                group: 'kanban',
+                animation: 150,
+                ghostClass: 'ghost-card',
+                onEnd: (evt) => {
+                    const id = evt.item.getAttribute('data-id');
+                    const nuevoEstado = evt.to.getAttribute('data-status');
+                    const tarea = tareasLocales.find(t => t.id == id);
+                    if(tarea) {
+                        tarea.estado = nuevoEstado;
+                        tarea.ultima_actualizacion = new Date();
+                        actualizarContadores();
+                    }
+                }
+            });
+        });
+
+        document.getElementById('taskForm').onsubmit = (e) => {
+            e.preventDefault();
+            const nueva = {
+                id: Date.now().toString(),
+                titulo: document.getElementById('taskTitle').value,
+                prioridad: document.getElementById('taskPriority').value,
+                estado: 'Backlog',
+                ultima_actualizacion: new Date()
+            };
+            tareasLocales.push(nueva);
+            renderTablero();
+            toggleModal(false);
+            e.target.reset();
+        };
+
+        function syncGmail() {
+            alert("Buscando correos @kio.tech con el asunto [SEGUIMIENTO]...");
+        }
+
+        renderTablero();
+    </script>
+</body>
+</html>
