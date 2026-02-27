@@ -1,97 +1,234 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KIO - Gestión de Proyectos Ágiles</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KIO - Gestión de Proyectos Ágiles</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1/dist/phosphor.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: { inter: ['Inter', 'sans-serif'] },
+                colors: {
+                    'kio-cyan': '#4DCFFF', 
+                    'kio-navy-darker': '#0A0A40',
+                    'kio-navy-dark': '#1A1A70',
+                    'kio-app-bar': '#0D0D4A', 
+                }
+            }
+        }
+    }
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --color-kio-cyan: #4DCFFF; 
+        --color-kio-navy-darker: #0A0A40; 
+        --color-kio-navy-dark: #1A1A70; 
+        --text-color-primary: #FFFFFF;
+    }
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/dist/phosphor.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    .app-bar-bg {
+        background-color: var(--color-kio-navy-darker);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
 
-    <style>
-        :root { --kio-navy: #0A0A40; --kio-cyan: #4DCFFF; }
-        body { background-color: #f3f4f6; margin: 0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: var(--kio-navy); z-index: 100; padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-        main { padding-top: 14rem; padding-bottom: 5rem; } 
-        .kanban-column { background: #e5e7eb; border-radius: 1.5rem; min-height: 500px; width: 300px; flex-shrink: 0; padding: 1.2rem; display: flex; flex-direction: column; }
-        .kanban-content { flex-grow: 1; min-height: 400px; }
-        .task-card { background: white; padding: 1.2rem; border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: grab; border-left: 6px solid var(--kio-cyan); margin-bottom: 1rem; }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(10,10,64,0.85); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 200; }
-    </style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f3f4f6;
+        margin: 0;
+    }
+
+    .kio-app-bar-container {
+        position: fixed;
+        top: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 95%;
+        width: 100%;
+        border-radius: 1.5rem;
+        overflow: hidden; 
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+        z-index: 100;
+    }
+
+    .kio-logo-text {
+        color: var(--text-color-primary);
+        text-shadow: 0 0 5px var(--color-kio-cyan), 0 0 10px var(--color-kio-cyan);
+    }
+
+    main { padding-top: 10rem; }
+
+    @media (min-width: 1024px) { .kio-app-bar-container { max-width: 1280px; } }
+
+    /* Estilos del Tablero */
+    .kanban-column {
+        background: #e5e7eb;
+        border-radius: 1.5rem;
+        min-height: 550px;
+        width: 300px;
+        flex-shrink: 0;
+        padding: 1.25rem;
+    }
+
+    .kanban-content { min-height: 450px; }
+
+    .task-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        cursor: grab;
+        border-left: 4px solid var(--color-kio-cyan);
+        margin-bottom: 1rem;
+        transition: transform 0.2s;
+    }
+
+    #login-overlay {
+        position: fixed; inset: 0; background: var(--color-kio-navy-darker);
+        z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+</style>
 </head>
-<body>
+<body class="antialiased">
 
-    <header class="header-fixed">
-        <div class="flex justify-between items-center max-w-7xl mx-auto text-white">
-            <div class="font-black text-2xl tracking-tighter kio-logo-text">KIO</div>
-            <h1 class="font-extrabold uppercase text-sm md:text-lg tracking-widest">Gestión de Proyectos Ágiles</h1>
-            <div id="user-info" class="text-[10px] font-bold text-kio-cyan"></div>
+    <div id="login-overlay">
+        <div class="text-center">
+            <h1 class="text-6xl font-black text-white mb-2 kio-logo-text">KIO</h1>
+            <p class="text-kio-cyan font-bold tracking-[0.2em] mb-12 uppercase text-xs">Acceso Restringido</p>
+            <div id="google-btn" class="flex justify-center"></div>
+            <button onclick="entrarInvitado()" class="mt-8 text-white/20 text-[10px] hover:text-white transition underline tracking-widest uppercase">Omitir para revisión visual</button>
+        </div>
+    </div>
+
+    <header class="kio-app-bar-container app-bar-bg">
+        <div class="px-6 sm:px-8 lg:px-10 h-16 sm:h-20 flex items-center relative">
+            <div class="flex items-center space-x-2">
+                <a href="#" class="text-xl sm:text-2xl font-extrabold tracking-tight whitespace-nowrap kio-logo-text uppercase">KIO</a>
+                <span class="text-[10px] text-gray-400 font-semibold tracking-wider uppercase hidden sm:block">MADE TO DISRUPT</span>
+            </div>
+            <div class="flex-grow flex justify-center items-center h-full absolute inset-0 pointer-events-none">
+                <h1 class="text-sm sm:text-lg font-bold text-white text-center tracking-widest whitespace-nowrap px-4 truncate uppercase">
+                    Gestión de Proyectos Ágiles
+                </h1>
+            </div>
+            <div class="ml-auto flex items-center space-x-4">
+                <span id="userName" class="text-white text-[10px] font-bold hidden md:block uppercase"></span>
+                <button class="text-white hover:text-kio-cyan transition-colors"><i class="ph-bold ph-bell text-xl"></i></button>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-6">
+    <main class="max-w-7xl mx-auto p-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div class="bg-white p-6 rounded-3xl border-b-8 border-red-500 shadow-sm"><p class="text-[10px] font-black text-gray-400 uppercase">Pendientes</p><p class="text-4xl font-black" id="count-backlog">0</p></div>
-            <div class="bg-white p-6 rounded-3xl border-b-8 border-blue-400 shadow-sm"><p class="text-[10px] font-black text-gray-400 uppercase">En Curso</p><p class="text-4xl font-black" id="count-progress">0</p></div>
-            <div class="bg-white p-6 rounded-3xl border-b-8 border-green-500 shadow-sm"><p class="text-[10px] font-black text-gray-400 uppercase">Finalizadas</p><p class="text-4xl font-black" id="count-done">0</p></div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border-b-8 border-red-500">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pendientes</p>
+                <p class="text-4xl font-black text-gray-800" id="count-backlog">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border-b-8 border-kio-cyan">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">En Curso</p>
+                <p class="text-4xl font-black text-gray-800" id="count-progress">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border-b-8 border-green-500">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Finalizado</p>
+                <p class="text-4xl font-black text-gray-800" id="count-done">0</p>
+            </div>
         </div>
 
         <div class="flex gap-6 overflow-x-auto pb-10">
-            <div class="kanban-column"><h3 class="text-[11px] font-black text-gray-500 mb-6 uppercase">Backlog</h3><div id="col-backlog" class="kanban-content"></div></div>
-            <div class="kanban-column"><h3 class="text-[11px] font-black text-blue-600 mb-6 uppercase">En Curso</h3><div id="col-progress" class="kanban-content"></div></div>
-            <div class="kanban-column"><h3 class="text-[11px] font-black text-orange-500 mb-6 uppercase">Revisión</h3><div id="col-review" class="kanban-content"></div></div>
-            <div class="kanban-column"><h3 class="text-[11px] font-black text-green-600 mb-6 uppercase">Finalizado</h3><div id="col-done" class="kanban-content"></div></div>
+            <div class="kanban-column"><h3 class="text-[10px] font-black text-gray-500 mb-6 uppercase">Backlog</h3><div id="col-backlog" class="kanban-content" data-status="Backlog"></div></div>
+            <div class="kanban-column"><h3 class="text-[10px] font-black text-blue-600 mb-6 uppercase">En Curso</h3><div id="col-progress" class="kanban-content" data-status="In Progress"></div></div>
+            <div class="kanban-column"><h3 class="text-[10px] font-black text-orange-500 mb-6 uppercase">Revisión</h3><div id="col-review" class="kanban-content" data-status="Review"></div></div>
+            <div class="kanban-column"><h3 class="text-[10px] font-black text-green-600 mb-6 uppercase">Finalizado</h3><div id="col-done" class="kanban-content" data-status="Done"></div></div>
         </div>
     </main>
 
-    <button onclick="abrirModal()" class="fixed bottom-10 right-10 bg-[#0A0A40] text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-50 border-4 border-white">
+    <button onclick="toggleModal(true)" class="fixed bottom-10 right-10 bg-kio-navy-darker text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition z-40 border-4 border-white">
         <i class="ph-bold ph-plus text-2xl"></i>
     </button>
 
-    <div id="modalNota" class="modal-overlay">
-        <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-2xl mx-4">
-            <h2 class="font-black text-gray-800 uppercase text-xs mb-6">Nueva Actividad</h2>
-            <input type="text" id="inputTitulo" placeholder="¿Qué hay que hacer?" class="w-full border-b-2 py-3 outline-none focus:border-blue-400 mb-8 text-sm font-medium">
+    <div id="taskModal" class="fixed inset-0 bg-kio-navy-darker/80 backdrop-blur-md z-[200] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden p-8">
+            <h3 class="font-black text-gray-800 uppercase text-xs tracking-widest mb-6">Nueva Actividad</h3>
+            <input type="text" id="taskTitle" placeholder="¿En qué trabajaremos?" class="w-full border-b-2 py-3 outline-none focus:border-kio-cyan mb-8 text-sm">
             <div class="flex gap-4">
-                <button onclick="cerrarModal()" class="flex-1 text-gray-400 text-[10px] font-black">CANCELAR</button>
-                <button onclick="crearNota()" class="flex-1 bg-blue-900 text-white py-4 rounded-2xl text-[10px] font-black">GUARDAR</button>
+                <button onclick="toggleModal(false)" class="flex-1 text-gray-400 text-[10px] font-black uppercase">Cancelar</button>
+                <button onclick="crearActividad()" class="flex-1 bg-kio-navy-darker text-white py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg">Guardar</button>
             </div>
         </div>
     </div>
 
     <script>
-        // CONFIGURACIÓN (AQUÍ PEGAS TUS LLAVES)
+        // CONFIGURACIÓN DE LLAVES
         const SUPABASE_URL = 'https://cmtfevqonvihtqqwwqgc.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_P7LOmUI8DJUKkIcdkDgzAg_CPOfcS4e';
         const GOOGLE_CLIENT_ID = '481012850408-jqmlauhb1qhgqe67ua1tiad1ovgj1e96.apps.googleusercontent.com';
 
-        // LÓGICA DE FUNCIONAMIENTO
-        function abrirModal() { document.getElementById('modalNota').style.display = 'flex'; }
-        function cerrarModal() { document.getElementById('modalNota').style.display = 'none'; }
+        const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-        function crearNota() {
-            const titulo = document.getElementById('inputTitulo').value;
-            if(!titulo.trim()) return;
+        window.onload = function () {
+            if(typeof google !== 'undefined') {
+                google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleLogin });
+                google.accounts.id.renderButton(document.getElementById("google-btn"), { theme: "outline", size: "large" });
+            }
+        }
+
+        function handleLogin(response) {
+            const data = JSON.parse(atob(response.credential.split('.')[1]));
+            if (data.email.endsWith("@kio.tech")) {
+                document.getElementById('userName').innerText = data.name;
+                entrarInvitado();
+                cargarDesdeBase();
+            }
+        }
+
+        function entrarInvitado() {
+            document.getElementById('login-overlay').style.display = 'none';
+        }
+
+        function toggleModal(s) { document.getElementById('taskModal').classList.toggle('hidden', !s); }
+
+        function crearActividad() {
+            const titulo = document.getElementById('taskTitle').value;
+            if(!titulo) return;
             const card = document.createElement('div');
             card.className = "task-card";
             card.innerHTML = `<p class="text-xs font-bold text-gray-700">${titulo}</p>`;
             document.getElementById('col-backlog').appendChild(card);
-            cerrarModal();
+            toggleModal(false);
+            document.getElementById('taskTitle').value = '';
             actualizarContadores();
         }
 
-        const idsCol = ['col-backlog', 'col-progress', 'col-review', 'col-done'];
-        idsCol.forEach(id => {
-            new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, onEnd: actualizarContadores });
+        // ACTIVAR DRAG & DROP
+        const columnas = ['col-backlog', 'col-progress', 'col-review', 'col-done'];
+        columnas.forEach(id => {
+            new Sortable(document.getElementById(id), {
+                group: 'kanban',
+                animation: 150,
+                onEnd: actualizarContadores
+            });
         });
 
         function actualizarContadores() {
             document.getElementById('count-backlog').innerText = document.getElementById('col-backlog').children.length;
             document.getElementById('count-progress').innerText = document.getElementById('col-progress').children.length;
             document.getElementById('count-done').innerText = document.getElementById('col-done').children.length;
+        }
+
+        async function cargarDesdeBase() {
+            if(!supabase) return;
+            const { data } = await supabase.from('tareas').select('*');
+            // Lógica para pintar desde DB...
         }
     </script>
 </body>
