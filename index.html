@@ -71,6 +71,79 @@
     </div>
 
     <script>
+    // --- CONFIGURACIÓN DE SUPABASE ---
+    const SUPABASE_URL = 'AQUÍ_PEGA_TU_URL';
+    const SUPABASE_KEY = 'AQUÍ_PEGA_TU_LLAVE_ANON';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Función para abrir/cerrar modal
+    function quitarBloqueo() { document.getElementById('login-overlay').style.display = 'none'; }
+    function abrirModal() { document.getElementById('m-task').classList.remove('hidden'); document.getElementById('i-task').focus(); }
+    function cerrarModal() { document.getElementById('m-task').classList.add('hidden'); }
+
+    // CARGAR TAREAS DESDE LA BASE DE DATOS AL INICIAR
+    async function cargarTareas() {
+        const { data: tareas, error } = await supabase.from('tareas').select('*').order('ultima_actualizacion', { ascending: false });
+        if (error) return console.error(error);
+
+        // Limpiar columnas
+        ['col-back', 'col-prog', 'col-rev', 'col-done'].forEach(id => document.getElementById(id).innerHTML = '');
+
+        // Pintar tarjetas
+        tareas.forEach(t => {
+            const mapping = { 'Backlog': 'col-back', 'In Progress': 'col-prog', 'Review': 'col-rev', 'Done': 'col-done' };
+            const colId = mapping[t.estado];
+            const col = document.getElementById(colId);
+            if (col) {
+                const card = document.createElement('div');
+                card.className = "task-card animate-in fade-in duration-300";
+                card.setAttribute('data-id', t.id);
+                card.innerHTML = `<p class="text-xs font-bold text-gray-700 leading-relaxed uppercase">${t.titulo}</p><div class="flex justify-between mt-3 opacity-20 text-[8px] font-black uppercase tracking-tighter"><span>${new Date(t.ultima_actualizacion).toLocaleDateString()}</span><i class="ph-bold ph-dots-six-vertical text-lg"></i></div>`;
+                col.appendChild(card);
+            }
+        });
+        updateC();
+    }
+
+    // GUARDAR NUEVA TAREA EN SUPABASE
+    async function addT() {
+        const val = document.getElementById('i-task').value;
+        if(!val) return;
+
+        const { error } = await supabase.from('tareas').insert([{ titulo: val, estado: 'Backlog' }]);
+        
+        if (!error) {
+            document.getElementById('i-task').value = '';
+            cerrarModal();
+            cargarTareas(); // Recargar para ver la nueva tarea
+        }
+    }
+
+    // ACTUALIZAR ESTADO AL MOVER (Drag & Drop)
+    async function moverTarea(id, nuevoEstado) {
+        const mappingInverso = { 'col-back': 'Backlog', 'col-prog': 'In Progress', 'col-rev': 'Review', 'col-done': 'Done' };
+        await supabase.from('tareas').update({ estado: mappingInverso[nuevoEstado], ultima_actualizacion: new Date().toISOString() }).eq('id', id);
+        updateC();
+    }
+
+    // Inicializar Sortable con guardado
+    ['col-back', 'col-prog', 'col-rev', 'col-done'].forEach(id => {
+        new Sortable(document.getElementById(id), { 
+            group: 'k', 
+            animation: 150, 
+            onEnd: (evt) => {
+                const idTarea = evt.item.getAttribute('data-id');
+                const idColumnaDestino = evt.to.id;
+                moverTarea(idTarea, idColumnaDestino);
+            } 
+        });
+    });
+
+    function updateC() {
+        document.getElementById('c-back').innerText = document.getElementById('col-back').children.length;
+        document.getElementById('c-prog').innerText = document.getElementById('col-prog').children.length;
+        document.getElementById('c-done').innerText = document.getElementById('col-done').children.length;
+    }
         function quitarBloqueo() { document.getElementById('login-overlay').style.display = 'none'; }
         function abrirModal() { document.getElementById('m-task').classList.remove('hidden'); }
         function cerrarModal() { document.getElementById('m-task').classList.add('hidden'); }
@@ -109,3 +182,4 @@
     </script>
 </body>
 </html>
+
